@@ -70,9 +70,11 @@ async def register(name: str, email: str, phone: str, password: str, db: AsyncSe
 @router_auth.get("/setup-first-time")
 async def setup_first_time(db: AsyncSession = Depends(get_db)):
     """Initialize DB with admin user and products."""
+    created_user = None
     # 1. Create User
     existing = await db.execute(select(User).where(User.email == "admin@milkyroots.in"))
-    if not existing.scalar_one_or_none():
+    user = existing.scalar_one_or_none()
+    if not user:
         user = User(
             name="Neetu", 
             email="admin@milkyroots.in", 
@@ -80,6 +82,10 @@ async def setup_first_time(db: AsyncSession = Depends(get_db)):
             hashed_pw=hash_password("milky123")
         )
         db.add(user)
+        await db.flush()
+        created_user = "admin@milkyroots.in"
+    else:
+        created_user = "Already exists"
     
     # 2. Seed Products
     defaults = [
@@ -88,13 +94,21 @@ async def setup_first_time(db: AsyncSession = Depends(get_db)):
         {"name": "Fresh Buttermilk", "name_hindi": "ताजा छाछ",         "unit": "ml", "price_per_unit": 0.04,   "min_qty": 500, "step_qty": 500, "emoji": "🥤"},
         {"name": "Bilona Ghee",      "name_hindi": "बिलोना घी",        "unit": "g",  "price_per_unit": 1.8,    "min_qty": 250, "step_qty": 250, "emoji": "✨"},
     ]
+    seeded = []
     for d in defaults:
         existing_p = await db.execute(select(Product).where(Product.name == d["name"]))
         if not existing_p.scalar_one_or_none():
             db.add(Product(**d))
+            seeded.append(d["name"])
             
     await db.commit()
-    return {"status": "success", "message": "Admin user (admin@milkyroots.in / milky123) and products created!"}
+    return {
+        "status": "success", 
+        "admin_user": created_user,
+        "login_email": "admin@milkyroots.in",
+        "login_password": "milky123",
+        "products_seeded": seeded
+    }
 
 # attach to module-level
 auth = type("R", (), {"router": router_auth})()
