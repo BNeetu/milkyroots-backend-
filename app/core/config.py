@@ -15,20 +15,22 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
 
     # Database (PostgreSQL)
-    # Default to a local dev DB, but Vercel should provide DATABASE_URL
-    DATABASE_URL: str = os.getenv(
-        "DATABASE_URL", 
-        "postgresql+asyncpg://milkyroots:password@localhost:5432/milkyroots_db"
-    )
-
+    # Default to a local dev DB if NOT on Vercel
     @property
     def async_database_url(self) -> str:
-        """Ensure the URL uses postgresql+asyncpg:// scheme."""
-        url = self.DATABASE_URL
+        """Get the database URL, ensuring it uses the async pg driver."""
+        url = os.getenv("DATABASE_URL")
+        
+        # Fallback for local development only
+        if not url:
+            url = "postgresql+asyncpg://milkyroots:password@localhost:5432/milkyroots_db"
+            
+        # Fix Vercel's 'postgres://' scheme
         if url.startswith("postgres://"):
             url = url.replace("postgres://", "postgresql+asyncpg://", 1)
         elif url.startswith("postgresql://") and "+asyncpg" not in url:
             url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            
         return url
 
     # WhatsApp
