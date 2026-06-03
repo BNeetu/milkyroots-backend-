@@ -22,10 +22,9 @@ class Settings(BaseSettings):
         
         # FAIL FAST if URL is missing on Vercel
         if not url:
-            raise ValueError(
-                "CRITICAL ERROR: DATABASE_URL environment variable is MISSING on Vercel. "
-                "Please add it in Vercel Settings -> Environment Variables."
-            )
+            # We return a dummy local URL to allow the app to START so we can see the error in /health
+            # instead of a hard crash (500)
+            return "postgresql+asyncpg://missing_db_url:password@localhost:5432/milkyroots_db"
             
         # Fix Vercel's 'postgres://' scheme
         if url.startswith("postgres://"):
