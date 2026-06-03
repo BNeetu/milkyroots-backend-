@@ -15,15 +15,19 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
 
     # Database (PostgreSQL)
-    # Default to a local dev DB if NOT on Vercel
     @property
     def async_database_url(self) -> str:
         """Get the database URL, ensuring it uses the async pg driver."""
         url = os.getenv("DATABASE_URL")
         
-        # Fallback for local development only
+        # If we are on Vercel (or production) and URL is missing, FAIL FAST
         if not url:
-            url = "postgresql+asyncpg://milkyroots:password@localhost:5432/milkyroots_db"
+            # Only allow localhost fallback if explicitly in DEBUG mode locally
+            if self.DEBUG:
+                url = "postgresql+asyncpg://milkyroots:password@localhost:5432/milkyroots_db"
+            else:
+                # This will show up in your Vercel logs and as a 500 error
+                raise ValueError("CRITICAL ERROR: DATABASE_URL environment variable is MISSING on Vercel.")
             
         # Fix Vercel's 'postgres://' scheme
         if url.startswith("postgres://"):
