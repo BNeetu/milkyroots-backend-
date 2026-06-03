@@ -20,14 +20,12 @@ class Settings(BaseSettings):
         """Get the database URL, ensuring it uses the async pg driver."""
         url = os.getenv("DATABASE_URL")
         
-        # If we are on Vercel (or production) and URL is missing, FAIL FAST
+        # FAIL FAST if URL is missing on Vercel
         if not url:
-            # Only allow localhost fallback if explicitly in DEBUG mode locally
-            if self.DEBUG:
-                url = "postgresql+asyncpg://milkyroots:password@localhost:5432/milkyroots_db"
-            else:
-                # This will show up in your Vercel logs and as a 500 error
-                raise ValueError("CRITICAL ERROR: DATABASE_URL environment variable is MISSING on Vercel.")
+            raise ValueError(
+                "CRITICAL ERROR: DATABASE_URL environment variable is MISSING on Vercel. "
+                "Please add it in Vercel Settings -> Environment Variables."
+            )
             
         # Fix Vercel's 'postgres://' scheme
         if url.startswith("postgres://"):
